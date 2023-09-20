@@ -1,0 +1,2001 @@
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Prodcut type code
+    */
+    var ProductStructureType = (function () {
+        function ProductStructureType() {
+        }
+        return ProductStructureType;
+    }());
+    ProductStructureType.Product = 1;
+    ProductStructureType.ProductFamily = 2;
+    ProductStructureType.ProductBundle = 3;
+    ProductManagement.ProductStructureType = ProductStructureType;
+    /**
+    * Prodcut state code
+    */
+    var ProductStateCode = (function () {
+        function ProductStateCode() {
+        }
+        return ProductStateCode;
+    }());
+    ProductStateCode.Active = 0;
+    ProductStateCode.Retired = 1;
+    ProductStateCode.Draft = 2;
+    ProductStateCode.DraftActive = 3;
+    ProductManagement.ProductStateCode = ProductStateCode;
+    /**
+    * Prodcut state code description
+    */
+    var ProductStateCodeDescription = (function () {
+        function ProductStateCodeDescription() {
+        }
+        return ProductStateCodeDescription;
+    }());
+    ProductStateCodeDescription.Active = "Active";
+    ProductStateCodeDescription.Draft = "Draft";
+    ProductStateCodeDescription.Inactive = "Inactive";
+    ProductStateCodeDescription.UnderRevision = "Under Revision";
+    ProductManagement.ProductStateCodeDescription = ProductStateCodeDescription;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Entity names constants used in Common solution
+    */
+    var EntityNames = (function () {
+        function EntityNames() {
+        }
+        return EntityNames;
+    }());
+    EntityNames.Account = "account";
+    EntityNames.ActivityParty = "activityparty";
+    EntityNames.Connection = "connection";
+    EntityNames.ConnectionRole = "connectionrole";
+    EntityNames.Contact = "contact";
+    EntityNames.DynamicProperty = "dynamicproperty";
+    EntityNames.KnowledgeArticle = "knowledgearticle";
+    EntityNames.Lead = "lead";
+    EntityNames.Organization = "organization";
+    EntityNames.Product = "product";
+    EntityNames.ProductAssociation = "productassociation";
+    EntityNames.PriceLevel = "pricelevel";
+    EntityNames.SystemUser = "systemuser";
+    EntityNames.TransactionCurrency = "transactioncurrency";
+    EntityNames.UoM = "uom";
+    EntityNames.UoMSchedule = "uomschedule";
+    EntityNames.DynamicPropertyOptionSetItem = "dynamicpropertyoptionsetitem";
+    EntityNames.Entitlement = "entitlement";
+    EntityNames.InvoiceDetail = "invoicedetail";
+    EntityNames.OpportunityProduct = "opportunityproduct";
+    EntityNames.QuoteDetail = "quotedetail";
+    EntityNames.SalesOrderDetail = "salesorderdetail";
+    ProductManagement.EntityNames = EntityNames;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="../../../../TypeDefinitions/ProductManagement/Localization/ResourceStringProvider.d.ts" />
+/*
+ * Invokes the ResourceStringProvider if available; otherwise returns *key*.
+ * Using this class as a proxy for the ResourceStringProvider that is included per web dependency declaration
+ * in order to avoid null reference errors in case the dependency is not loaded for some reason.
+ */
+var ProductManagement;
+(function (ProductManagement) {
+    var StringProvider = (function () {
+        function StringProvider() {
+        }
+        StringProvider.getResourceString = function (key) {
+            return ProductManagement.ResourceStringProvider ? ProductManagement.ResourceStringProvider.getResourceString(key) : "*" + key + "*";
+        };
+        return StringProvider;
+    }());
+    ProductManagement.StringProvider = StringProvider;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="../../../../Packages/Crm.ClientApiTypings.1.0.839/clientapi/XrmClientApi.d.ts" />
+/// <reference path="../../../../Packages/Crm.ClientApiTypings.1.0.839/clientapi/XrmClientApiDeprecated.d.ts" />
+/// <reference path="../../../TypeDefinitions/CRM/ClientUtility.d.ts" />
+/// <reference path="../Localization/Provider/StringProvider.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Entity util class for common actions
+    */
+    var EntityUtil = (function () {
+        function EntityUtil() {
+        }
+        return EntityUtil;
+    }());
+    // Readonly form notification will be shown on the form when Mobile read-only setting is enabled for UCI.
+    EntityUtil.ShowReadOnlyNotificationInUCI = function (entityName, buttonUniqueId) {
+        Xrm.Utility.getEntityMetadata(entityName).then(function (entityMetadata) {
+            if (!ClientUtility.DataUtil.isNullOrUndefined(entityMetadata["IsReadOnlyInMobileClient"]) && ClientUtility.ClientUtil.isUCI()) {
+                var isReadOnlyInMobileClient = entityMetadata["IsReadOnlyInMobileClient"];
+                if (isReadOnlyInMobileClient) {
+                    var message = ProductManagement.StringProvider.getResourceString("Entity_set_to_readonly");
+                    var formObject = Xrm.Page.ui;
+                    var readMore = ProductManagement.StringProvider.getResourceString("Read_More");
+                    var readmoreURL = "https://go.microsoft.com/fwlink/?linkid=2120580";
+                    formObject.setFormNotification(message, Xrm.Constants.FormNotificationLevels.information, buttonUniqueId, [{
+                            Label: readMore, Handler: function () {
+                                return window.open(readmoreURL, "_blank");
+                            }
+                        }]);
+                }
+            }
+        }, ClientUtility.ActionFailedHandler.actionFailedErrorDialog);
+    };
+    ProductManagement.EntityUtil = EntityUtil;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="ProductStates.ts" />
+/// <reference path="../Common/EntityNames.ts" />
+/// <reference path="../Common/EntityUtil.ts" />
+/// <reference path="../../../TypeDefinitions/CRM/ClientUtility.d.ts" />
+/// <reference path="../Localization/Provider/StringProvider.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Main web resource library for Product
+    */
+    var ProductMainSystemLibraryWebResource = (function () {
+        function ProductMainSystemLibraryWebResource() {
+            var _this = this;
+            this._notesTabName = "notes";
+            this._notesSectionName = "notes";
+            this._bundleProductSectionName = "productassocaition_items";
+            this._bundleProductSectionNameTitle = "#productassocaition_items_titleText";
+            this._fcbOctober2019Update = "FCB.October2019Update";
+            this._readMoreUrlForParentFieldMissing = "https://go.microsoft.com/fwlink/?linkid=2124946";
+            this._fcbEnableReparentingForProduct = "FCB.EnableReparentingForProduct";
+            this._interval = 0;
+            this._productStructure = 1;
+            this._confirmReparentDialogUp = false;
+            this._saveForReparentingInProgress = false;
+            this._addanewproductformtype = false;
+            this._productFormTabNames = {
+                productAssociationItemsTabName: "productassocaition_items",
+                addtionalProductTabName: "price_list_items",
+                productDynamicPropertiesTabName: "product_dynamic_properties"
+            };
+            this._productFormSectionNames = {
+                productAssociationItemsSectionName: "productassocaition_items_section",
+                priceListItemsSectionName: "price_list_items_section",
+                productSubstituteItemsSectionName: "productsubstitute_items_section",
+                productDynamicPropertiesSectionName: "product_dynamic_properties_section"
+            };
+            /**
+            * To set additional params for default UOM id
+            */
+            this.defaultUoMIdSetAdditionalParams = function (context) {
+                var defaultUomScheduleAttributes = Xrm.Page.getAttribute("defaultuomscheduleid");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(defaultUomScheduleAttributes.getValue()) && defaultUomScheduleAttributes.getValue().length > 0) {
+                    var parentId = defaultUomScheduleAttributes.getValue()[0].id;
+                    var fetchXml = '<filter type="and"><condition attribute="uomscheduleid" operator="eq" value="' + parentId + '"/></filter>';
+                    var uomIdControl = Xrm.Page.ui.controls.get("defaultuomid");
+                    uomIdControl.addCustomFilter(fetchXml);
+                }
+            };
+            /**
+            * To set additional params for price list id
+            * @param {string} context
+            */
+            this.priceLevelIdSetAdditionalParams = function (context) {
+                // TODO: Platform does not support linked-entity filter: see AddCustomFilter in /src/Core/Application/WebApplication/controls/Grid/CustomGrids/LookupGridDataProvider.cs
+                // Task #556545 is used to track this app gap
+                //var productId = Xrm.Page.data.entity.getId();
+                //if (!ClientUtility.DataUtil.isNullOrEmptyString(productId)) {
+                //    var priceLevelControl = Xrm.Page.ui.controls.get("pricelevelid") as XrmClientApi.Controls.LookupControl;    
+                //    var fetchXml = '<link-entity name="productpricelevel" alias="productpricelevel" to="pricelevelid" from="pricelevelid" link-type="inner">';
+                //    fetchXml += '<filter type="and"><condition attribute="productid" operator="eq" value="' + productId + '"/></filter>';
+                //    fetchXml += '</link-entity>'                
+                //    priceLevelControl.addCustomFilter(fetchXml);
+                //}
+                if (!ClientUtility.ClientUtil.isUCI() && !ClientUtility.DataUtil.isNullOrEmptyString(Xrm.Page.data.entity.getId())) {
+                    var pricelevelControl = Xrm.Page.ui.controls.get("pricelevelid");
+                    pricelevelControl.setParameter("parentId", Xrm.Page.data.entity.getId());
+                }
+            };
+            /**
+            * Form Onload function - will get called whenever the form is complete refreshed or reloaded
+            */
+            this.formOnLoad = function () {
+                window.parent["productId"] = Xrm.Page.data.entity.getId();
+                _this._prevValues = new ClientUtility.PreviousDateTimeValues();
+                var formType = Xrm.Page.ui.getFormType();
+                var queryString = Xrm.Page.context.getQueryStringParameters();
+                var stateCodeControl = Xrm.Page.ui.controls.get("header_statecode");
+                var defaultUoMIdControl = Xrm.Page.ui.controls.get("defaultuomid");
+                var defaultUoMScheduleIdControl = Xrm.Page.ui.controls.get("defaultuomscheduleid");
+                var defaultUoMScheduleIdAttributes = Xrm.Page.getAttribute("defaultuomscheduleid");
+                var parentId = queryString["_CreateFromId"];
+                var parentName = queryString["_CreateFromName"];
+                var priceLevelControl = Xrm.Page.ui.controls.get("pricelevelid");
+                var parentAttribute = Xrm.Page.getAttribute("parentproductid");
+                var editableParentControl = Xrm.Page.getControl('editableParentControl');
+                _this._confirmReparentDialogUp = false;
+                _this.handleParentProductFields();
+                if (!ClientUtility.DataUtil.isNullOrUndefined(parentAttribute)) {
+                    _this._prevParent = parentAttribute.getValue();
+                }
+                if (ClientUtility.ClientUtil.isUCI()) {
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(parentId)) {
+                        var parentLookupData = [{
+                                "entityType": "product",
+                                "id": "{" + parentId + "}",
+                                "name": parentName
+                            }];
+                        Xrm.Page.data.entity.attributes.get("parentproductid").setValue(parentLookupData);
+                    }
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._getValidFromDate())) {
+                    _this._prevValues.setBeginDate(_this._getValidFromDate().getValue());
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._getValidToDate())) {
+                    _this._prevValues.setEndDate(_this._getValidToDate().getValue());
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(queryString) && !ClientUtility.DataUtil.isNullOrUndefined(queryString["productstructure"])) {
+                    _this._productStructure = new Number(queryString["productstructure"]).valueOf();
+                    Xrm.Page.data.entity.attributes.get("productstructure").setValue(_this._productStructure);
+                }
+                else if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.getAttribute("productstructure"))) {
+                    _this._productStructure = Xrm.Page.getAttribute("productstructure").getValue();
+                }
+                _this._hideUnhideSection(_this._notesTabName, _this._notesSectionName, true);
+                _this._setProductStructureBasedOnFormType(formType);
+                if (formType !== 3 /* ReadOnly */ && formType !== 4 /* Disabled */) {
+                    _this._updateQuantityOnHandDecimals();
+                }
+                if (_this.isProductFamily() && formType === 1 /* Create */) {
+                    var defaultuomidCtrl = Xrm.Page.ui.controls.get("defaultuomid");
+                    var defaultuomscheduleidCtrl = Xrm.Page.ui.controls.get("defaultuomscheduleid");
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(defaultuomidCtrl)) {
+                        defaultuomidCtrl.setVisible(false);
+                    }
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(defaultuomscheduleidCtrl)) {
+                        defaultuomscheduleidCtrl.setVisible(false);
+                    }
+                }
+                _this._showNotificationIfNeccesary();
+                _this._handleNavigationVisibility();
+                _this._disableDefaultUoMId(formType, defaultUoMIdControl, defaultUoMScheduleIdControl, defaultUoMScheduleIdAttributes);
+                _this._verifyProductStructureProductFamily(defaultUoMScheduleIdControl);
+                if (_this.isBundle() || _this.isKit()) {
+                    _this._hideUnhideSection(_this._productFormTabNames.productAssociationItemsTabName, _this._productFormSectionNames.productAssociationItemsSectionName, true);
+                }
+                if (_this.isKit()) {
+                    _this._hideUnhideSection(_this._productFormTabNames.productDynamicPropertiesTabName, _this._productFormSectionNames.productDynamicPropertiesSectionName, false);
+                }
+                if (Xrm.Page.context.client.getClient() === Xrm.Constants.ClientNames.outlook) {
+                    Xrm.Page.ui.refreshRibbon();
+                }
+                _this._hideUnhideStateCode(stateCodeControl, queryString);
+                var propertiesTab = Xrm.Page.ui.tabs.get("product_dynamic_properties");
+                if (propertiesTab != null) {
+                    propertiesTab.addTabStateChange(_this.handleMobileOffline);
+                }
+                ProductManagement.EntityUtil.ShowReadOnlyNotificationInUCI(ProductManagement.EntityNames.Product, "product_readonly_message");
+                _this.showPricingSectionIfRequired();
+                if ((Xrm.Page.ui.getFormType() !== 1 /* Create */) && (ClientUtility.DataUtil.isNullOrUndefined(editableParentControl)) && (ClientUtility.ClientUtil.isUCI())) {
+                    _this.showNotificationIfParentIsMissing();
+                }
+            };
+            /**
+            * Form OnSave function - will get called whenever the form is saved
+            */
+            this.formOnSave = function (context) {
+                if (_this.isProductReparentingEnabled()) {
+                    // If the "confrm reparent" diaglog, is already present, prevent the autosave.
+                    if (context.getEventArgs().getSaveMode() === 70 && _this._confirmReparentDialogUp == true) {
+                        context.getEventArgs().preventDefault();
+                        return false;
+                    }
+                    if (_this._saveForReparentingInProgress)
+                        return false;
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._getValidFromDate()) && !ClientUtility.DataUtil.isNullOrUndefined(_this._getValidToDate())) {
+                    if (!ClientUtility.DateValidation.isStartDateLessThanEndDate(_this._getValidFromDate(), _this._getValidToDate(), true, !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getBeginDate()) ? _this._prevValues.getBeginDate() : null, !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getEndDate()) ? _this._prevValues.getEndDate() : null, ProductManagement.StringProvider.getResourceString("Web.products.ValidToEarlierThanValidFromDate"))) {
+                        context.getEventArgs().preventDefault();
+                        return false;
+                    }
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues)) {
+                        _this._prevValues.setBeginDate(_this._getValidFromDate().getValue());
+                        _this._prevValues.setEndDate(_this._getValidToDate().getValue());
+                    }
+                }
+                if (Xrm.Page.ui.getFormType() !== 1 /* Create */ && _this.isProductReparentingEnabled()) {
+                    var parentAttribute = Xrm.Page.getAttribute("parentproductid");
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(parentAttribute)) {
+                        var parentlookup = parentAttribute.getValue();
+                        var currentParentId = null;
+                        var prevParentId = null;
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(parentlookup) && parentlookup.length > 0)
+                            currentParentId = parentlookup[0].id;
+                        if (_this._prevParent != null && _this._prevParent.length > 0)
+                            prevParentId = _this._prevParent[0].id;
+                        if (currentParentId != prevParentId) {
+                            context.getEventArgs().preventDefault();
+                            _this.confirmReparent();
+                        }
+                    }
+                }
+                else {
+                    return true;
+                }
+            };
+            this.showNotificationIfParentIsMissing = function () {
+                Xrm.Utility.getEntityMetadata(ProductManagement.EntityNames.Product, ["parentproductid"]).then(function (response) {
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(response)) {
+                        var parentDisplayName = response.Attributes.getByName("parentproductid") ? response.Attributes.getByName("parentproductid").DisplayName : "Parent";
+                        var parentLogicalName = response.Attributes.getByName("parentproductid") ? response.Attributes.getByName("parentproductid").LogicalName : "parentproductid";
+                        var formObject = Xrm.Page.ui;
+                        var readMore = ProductManagement.StringProvider.getResourceString("Read_More");
+                        var readMoreUrlForParentFieldMissing = _this._readMoreUrlForParentFieldMissing;
+                        if (!ClientUtility.DataUtil.isNullOrEmptyString(parentDisplayName)) {
+                            var notification = String.format(ProductManagement.StringProvider.getResourceString("Reparenting_Attribute_Missing"), parentDisplayName, parentDisplayName);
+                            formObject.setFormNotification(notification, Xrm.Constants.FormNotificationLevels.warning, "reparenting_attribute_missing_notification", [{
+                                    Label: readMore, Handler: function () {
+                                        return window.open(readMoreUrlForParentFieldMissing, "_blank");
+                                    }
+                                }]);
+                            //Logging the telemetry data for Parent attribute form notification
+                            var eventName = "Product Notifications";
+                            var message = "ParentProductId is missing in form";
+                            var event_1 = _this.getTelemetryPayload(parentLogicalName, ProductManagement.EntityNames.Product, eventName, message);
+                            Xrm.Reporting.reportEvent(event_1);
+                        }
+                    }
+                }, ClientUtility.ActionFailedHandler.actionFailedCallback);
+            };
+            this.getTelemetryPayload = function (parentLogicalName, entityName, eventName, message) {
+                var eventValues = {
+                    ActionName: "OpenFormAction",
+                    EntityName: entityName,
+                    LogicalName: parentLogicalName,
+                    EventName: eventName,
+                    Message: message
+                };
+                var eventParameters = [];
+                for (var key in eventValues) {
+                    if (eventValues.hasOwnProperty(key)) {
+                        eventParameters.push({ name: key, value: eventValues[key] });
+                    }
+                }
+                var eventPayLoad = {
+                    activityId: ClientUtility.Guid.newGuid(),
+                    eventParameters: eventParameters
+                };
+                return eventPayLoad;
+            };
+            /**
+            * Handles all Kit Form UI related configuration
+            * Sets the Kit Products section name
+            * Sets the Kit Product sub section name and its title
+            * Sets the Navigation item for Kit Products
+            */
+            this.HandleKitFormUIConfiguration = function () {
+                var isKitValue = Xrm.Page.data.entity.attributes.get("iskit");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(isKitValue) && isKitValue.getValue()) {
+                    var bundleProductSection = Xrm.Page.ui.tabs.get(_this._bundleProductSectionName);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(bundleProductSection)) {
+                        bundleProductSection.setLabel(ProductManagement.StringProvider.getResourceString("Kit_Products_Section_Name"));
+                    }
+                    _this._interval = window.setInterval(function () {
+                        var subgridKitProduct = Xrm.Page.getControl("productassocaition_items");
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(subgridKitProduct)) {
+                            subgridKitProduct.setLabel(ProductManagement.StringProvider.getResourceString("Kit_Products_Section_Name"));
+                            window.clearInterval(_this._interval);
+                        }
+                    }, 200);
+                }
+            };
+            /**
+            * This method sets the parent product control label value on line refresh events
+            */
+            this.SetParentProductLabel = function () {
+                if (Xrm.Page.ui.getFormType() !== 1 /* Create */) {
+                    var parentProductControl = Xrm.Page.ui.controls.get("parentproductid");
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(parentProductControl) && !ClientUtility.DataUtil.isNullOrUndefined(ProductManagement.StringProvider.getResourceString("Product_Family_Hierarchy_Label_Value"))) {
+                        parentProductControl.setLabel(ProductManagement.StringProvider.getResourceString("Product_Family_Hierarchy_Label_Value"));
+                    }
+                }
+            };
+            /**
+            * To set additional params for default UOM schedule id
+            */
+            this.defaultUoMScheduleIdOnChange = function () {
+                var defaultuomidCtrl = Xrm.Page.ui.controls.get("defaultuomid");
+                var defaultuomidAttributes = Xrm.Page.getAttribute("defaultuomid");
+                var defaultuomscheduleAttributes = Xrm.Page.getAttribute("defaultuomscheduleid");
+                if (!defaultuomidAttributes.getUserPrivilege().canCreate) {
+                    defaultuomidCtrl.setDisabled(true);
+                }
+                else {
+                    defaultuomidCtrl.setDisabled(!_this.isProductFamily() && ClientUtility.DataUtil.isNullOrUndefined(defaultuomscheduleAttributes.getValue()));
+                }
+                if (_this.isProductFamily() && ClientUtility.DataUtil.isNullOrUndefined(defaultuomscheduleAttributes.getValue()) || defaultuomidCtrl.getDisabled()) {
+                    defaultuomidAttributes.setValue([]);
+                }
+            };
+            /**
+            * on change of decimal supported value
+            */
+            this.quantityDecimalOnChange = function () {
+                _this._updateQuantityOnHandDecimals();
+            };
+            /**
+            * Update the price list
+            */
+            this.priceLevelIdOnChange = function () {
+                _this._showNotificationIfNeccesary();
+            };
+            /**
+            * Validate from date is less than to date on change
+            */
+            this.validFromDateOnChange = function () {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getBeginDate())) {
+                    _this._prevValues.setBeginDate(_this._getValidFromDate().getValue());
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getEndDate())) {
+                    _this._prevValues.setEndDate(_this._getValidToDate().getValue());
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._getValidFromDate()) && !ClientUtility.DataUtil.isNullOrUndefined(_this._getValidToDate())) {
+                    return ClientUtility.DateValidation.isStartDateLessThanEndDate(_this._getValidFromDate(), _this._getValidToDate(), true, !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getBeginDate()) ? _this._prevValues.getBeginDate() : null, !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getEndDate()) ? _this._prevValues.getEndDate() : null, ProductManagement.StringProvider.getResourceString("Web.products.ValidToEarlierThanValidFromDate"));
+                }
+                return false;
+            };
+            /**
+            * Validate from date is less than to date on change
+            */
+            this.validToDateOnChange = function () {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getBeginDate())) {
+                    _this._prevValues.setBeginDate(_this._getValidFromDate().getValue());
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getEndDate())) {
+                    _this._prevValues.setEndDate(_this._getValidToDate().getValue());
+                }
+                if (!ClientUtility.DataUtil.isNullOrUndefined(_this._getValidFromDate()) && !ClientUtility.DataUtil.isNullOrUndefined(_this._getValidToDate())) {
+                    return ClientUtility.DateValidation.isStartDateLessThanEndDate(_this._getValidFromDate(), _this._getValidToDate(), false, !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getBeginDate()) ? _this._prevValues.getBeginDate() : null, !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues) && !ClientUtility.DataUtil.isNullOrUndefined(_this._prevValues.getEndDate()) ? _this._prevValues.getEndDate() : null, ProductManagement.StringProvider.getResourceString("Web.products.ValidToEarlierThanValidFromDate"));
+                }
+                return false;
+            };
+            this._hideUnhideSection = function (tabName, sectionName, hideUnhide) {
+                var tab = Xrm.Page.ui.tabs.get(tabName);
+                if (!ClientUtility.DataUtil.isNullOrUndefined(tab)) {
+                    var section = tab.sections.get(sectionName);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(section)) {
+                        tab.setVisible(hideUnhide);
+                        section.setVisible(hideUnhide);
+                    }
+                }
+            };
+            this.isBundle = function () {
+                return _this._productStructure === ProductManagement.ProductStructureType.ProductBundle;
+            };
+            this.isProductFamily = function () {
+                return _this._productStructure === ProductManagement.ProductStructureType.ProductFamily;
+            };
+            this.isKit = function () {
+                var isKit = Xrm.Page.getAttribute("iskit");
+                var productStructure = Xrm.Page.getAttribute("productstructure");
+                return !ClientUtility.DataUtil.isNullOrUndefined(isKit) && !ClientUtility.DataUtil.isNullOrUndefined(productStructure) && isKit.getValue() && productStructure.getValue() === ProductManagement.ProductStructureType.Product;
+            };
+            this.isProduct = function () {
+                var isKit = Xrm.Page.getAttribute("iskit");
+                var productStructure = Xrm.Page.getAttribute("productstructure");
+                return !ClientUtility.DataUtil.isNullOrUndefined(isKit) && !ClientUtility.DataUtil.isNullOrUndefined(productStructure) && !isKit.getValue() && productStructure.getValue() === ProductManagement.ProductStructureType.Product;
+            };
+            this._getValidFromDate = function () {
+                var validFromControl = Xrm.Page.ui.controls.get("validfromdate");
+                return ClientUtility.DataUtil.isNullOrUndefined(validFromControl) ? null : validFromControl.getAttribute();
+            };
+            this._getValidToDate = function () {
+                var validFromControl = Xrm.Page.ui.controls.get("validtodate");
+                return ClientUtility.DataUtil.isNullOrUndefined(validFromControl) ? null : validFromControl.getAttribute();
+            };
+            this._hideUnhideStateCode = function (stateCodeControl, queryString) {
+                //For View Published Product Form queryString['revise'] has a value false,
+                //For other states, it is NULL. Show StateCode control for all states and hide in case of View Published Product Form
+                if (!ClientUtility.DataUtil.isNullOrUndefined(stateCodeControl) && !ClientUtility.DataUtil.isNullOrUndefined(queryString) && !ClientUtility.DataUtil.isNullOrUndefined(queryString["revise"]) && queryString["revise"] === "false") {
+                    // SetVisible takes care of updating the display value of the related label cell, value cell and its parent container.
+                    // By default the control visibility property is true  
+                    // So explicitly setting the control visibility to false 
+                    stateCodeControl.setVisible(false);
+                }
+            };
+            this._disableDefaultUoMId = function (formType, defaultUoMIdControl, defaultUoMScheduleIdControl, defaultUoMScheduleIdAttributes) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(defaultUoMIdControl) && !ClientUtility.DataUtil.isNullOrUndefined(defaultUoMScheduleIdControl) && !ClientUtility.DataUtil.isNullOrUndefined(defaultUoMScheduleIdAttributes)) {
+                    if (ClientUtility.DataUtil.isNullOrUndefined(defaultUoMScheduleIdAttributes.getValue())) {
+                        defaultUoMIdControl.setDisabled(true);
+                    }
+                    if (formType !== 1 /* Create */ && formType !== 4 /* Disabled */) {
+                        defaultUoMScheduleIdControl.setDisabled(true);
+                        var pricelevelid = Xrm.Page.ui.controls.get("pricelevelid");
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(pricelevelid)) {
+                            pricelevelid.setDisabled(false);
+                        }
+                    }
+                }
+            };
+            this._setProductStructureBasedOnFormType = function (formType) {
+                if (Xrm.Page.context.client.getClient() !== Xrm.Constants.ClientNames.mobile) {
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(ProductManagement.StringProvider.getResourceString("Product_Bundle_Form_Title")) && formType === 1 /* Create */ && _this.isBundle()) {
+                        _this._setFormEntityName(ProductManagement.StringProvider.getResourceString("Product_Bundle_Form_Title"));
+                    }
+                    else {
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(ProductManagement.StringProvider.getResourceString("ProductFamilyQuickCreate.DisplayName")) && formType === 1 /* Create */ && _this.isProductFamily()) {
+                            _this._setFormEntityName(ProductManagement.StringProvider.getResourceString("ProductFamilyQuickCreate.DisplayName"));
+                        }
+                        else {
+                            var formTitle = Xrm.Page.getAttribute("name");
+                            if (!ClientUtility.DataUtil.isNullOrUndefined(formTitle)) {
+                                var titlePrefix = null;
+                                var name = null;
+                                if (_this.isKit()) {
+                                    titlePrefix = ProductManagement.StringProvider.getResourceString("Object_Singular_Kit");
+                                }
+                                else if (_this.isBundle()) {
+                                    titlePrefix = ProductManagement.StringProvider.getResourceString("Object_Singular_Bundle");
+                                }
+                                else if (_this.isProductFamily()) {
+                                    titlePrefix = ProductManagement.StringProvider.getResourceString("Object_Singular_Product_Family");
+                                }
+                                else {
+                                    titlePrefix = ProductManagement.StringProvider.getResourceString("Object_Singular_Product");
+                                }
+                            }
+                            if (ClientUtility.ClientUtil.isUCI()) {
+                                name = String.format("{0}", titlePrefix);
+                            }
+                            else {
+                                name = String.format("{0}: {1}", titlePrefix, formTitle.getValue());
+                            }
+                            if (!ClientUtility.DataUtil.isNullOrUndefined(name)) {
+                                _this._setFormEntityName(name);
+                            }
+                        }
+                    }
+                }
+                _this.SetParentProductLabel();
+                _this.HandleKitFormUIConfiguration();
+            };
+            this._setFormEntityName = function (name) {
+                //TODO: Xrm.Page.ui.setFormEntityName is undefined in Classic web. Per Bug 546555 this is marked as won't fix
+                ClientUtility.ClientUtil.isUCI() ? Xrm.Page.ui.setFormEntityName(name) : Xrm.Internal.setFormEntityName(name);
+            };
+            this._verifyProductStructureProductFamily = function (defaultuomscheduleIdControl) {
+                if (_this.isProductFamily()) {
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.ui.controls.get("defaultuomid"))) {
+                        var defaultuomId = Xrm.Page.data.entity.attributes.get("defaultuomid");
+                        defaultuomId.setRequiredLevel(Xrm.Constants.AttributeRequiredLevels.none);
+                    }
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.ui.controls.get("defaultuomscheduleid"))) {
+                        var stateCode = Xrm.Page.getAttribute("statecode");
+                        var defaultuomscheduleid = Xrm.Page.data.entity.attributes.get("defaultuomscheduleid");
+                        defaultuomscheduleid.setRequiredLevel(Xrm.Constants.AttributeRequiredLevels.none);
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && stateCode.getValue().toString() !== "1") {
+                            defaultuomscheduleIdControl.setDisabled(false);
+                        }
+                    }
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.ui.controls.get("pricelevelid"))) {
+                        var pricelevelid = Xrm.Page.data.entity.attributes.get("pricelevelid");
+                        pricelevelid.setRequiredLevel(Xrm.Constants.AttributeRequiredLevels.none);
+                    }
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.ui.controls.get("quantitydecimal"))) {
+                        var quantitydecimal = Xrm.Page.data.entity.attributes.get("quantitydecimal");
+                        quantitydecimal.setRequiredLevel(Xrm.Constants.AttributeRequiredLevels.none);
+                    }
+                    _this._hideUnhideSection(_this._productFormTabNames.addtionalProductTabName, _this._productFormSectionNames.priceListItemsSectionName, false);
+                    _this._hideUnhideSection(_this._productFormTabNames.addtionalProductTabName, _this._productFormSectionNames.productSubstituteItemsSectionName, false);
+                }
+                else {
+                    _this._hideUnhideSection(_this._productFormTabNames.addtionalProductTabName, _this._productFormSectionNames.priceListItemsSectionName, true);
+                    _this._hideUnhideSection(_this._productFormTabNames.addtionalProductTabName, _this._productFormSectionNames.productSubstituteItemsSectionName, true);
+                }
+            };
+            this._handleNavigationVisibility = function () {
+                var navigation = Xrm.Page.ui.navigation;
+                if (!ClientUtility.DataUtil.isNullOrUndefined(navigation) && !ClientUtility.DataUtil.isNullOrUndefined(navigation.items)) {
+                    var kitsNavLink = navigation.items.get("navKits");
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(kitsNavLink)) {
+                        kitsNavLink.setVisible(_this.isBundle());
+                    }
+                    var productBundleLink = navigation.items.get("navProductBundles");
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(productBundleLink) && !_this.isProduct()) {
+                        productBundleLink.setVisible(false);
+                    }
+                    if (_this.isProductFamily()) {
+                        var relationShipLink = navigation.items.get("navSubs");
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(relationShipLink)) {
+                            relationShipLink.setVisible(false);
+                        }
+                        var competitorNavLink = navigation.items.get("navComps");
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(competitorNavLink)) {
+                            competitorNavLink.setVisible(false);
+                        }
+                        var salesliteratureNavLink = navigation.items.get("navSalesLit");
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(salesliteratureNavLink)) {
+                            salesliteratureNavLink.setVisible(false);
+                        }
+                    }
+                    if (Xrm.Page.ui.getFormType() !== 1 /* Create */ && _this.isProduct()) {
+                        var relationShipLink = navigation.items.get("navSubs");
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(relationShipLink)) {
+                            relationShipLink.setVisible(true);
+                        }
+                    }
+                }
+            };
+            this._updateQuantityOnHandDecimals = function () {
+                var quantityOnHand = Xrm.Page.getAttribute("quantityonhand");
+                var quantityDecimal = Xrm.Page.getAttribute("quantitydecimal");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(quantityOnHand)) {
+                    var accuracy = quantityDecimal.getValue();
+                    if (ClientUtility.DataUtil.isNullOrUndefined(accuracy)) {
+                        accuracy = 0;
+                    }
+                    _this.setPrecisionOnControl(quantityOnHand, accuracy);
+                }
+            };
+            this.setPrecisionOnControl = function (control, precision) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(control)) {
+                    try {
+                        control.setPrecision(precision);
+                    }
+                    catch (error) {
+                        var controlPrecision = control.getPrecision();
+                        if (controlPrecision != null && controlPrecision < precision)
+                            error.message = ProductManagement.StringProvider.getResourceString("CannotSetPrecisionValue").replace("{0}", control.getName()).replace("{1}", controlPrecision.toString());
+                        ClientUtility.ActionFailedHandler.actionFailedCallback(error);
+                    }
+                }
+            };
+            this._showNotificationIfNeccesary = function () {
+                var formType = Xrm.Page.ui.getFormType();
+                if (1 /* Create */ === formType) {
+                    _this._addanewproductformtype = true;
+                }
+                var defaultPriceListAttributes = Xrm.Page.getAttribute("pricelevelid");
+                if (formType !== 1 /* Create */ && !_this.isProductFamily() && (ClientUtility.DataUtil.isNullOrUndefined(defaultPriceListAttributes) || ClientUtility.DataUtil.isNullOrUndefined(defaultPriceListAttributes.getValue()))) {
+                    var notificationText = ProductManagement.StringProvider.getResourceString("Web.SFA.product.edit.aspx_90") + " " + ProductManagement.StringProvider.getResourceString("Web.SFA.product.edit.aspx_91");
+                    Xrm.Page.ui.setFormNotification(notificationText, Xrm.Constants.FormNotificationLevels.warning, "product_missing_default_price_list");
+                }
+                else {
+                    Xrm.Page.ui.clearFormNotification("product_missing_default_price_list");
+                }
+                var globalAttributes = Xrm.Utility.getGlobalContext().organizationSettings.attributes;
+                if (!ClientUtility.DataUtil.isNullOrUndefined(globalAttributes)) {
+                    var isPublishEnabled = ClientUtility.ClientUtil.isUCI() ? (globalAttributes["createproductswithoutparentinactivestate"] == 1 ? true : false) : globalAttributes["createProductsWithoutParentInActiveState"];
+                    if (isPublishEnabled && 2 /* Update */ === formType && !_this.isProductFamily()) {
+                        var notificationText = ProductManagement.StringProvider.getResourceString("Web.SFA.product.edit.aspx_92");
+                        var formObject = Xrm.Page.ui;
+                        var readMore = ProductManagement.StringProvider.getResourceString("Read_More");
+                        var readmoreURL = "https://go.microsoft.com/fwlink/?linkid=2120636";
+                        formObject.setFormNotification(notificationText, Xrm.Constants.FormNotificationLevels.information, "products_in_active_state", [{
+                                Label: readMore, Handler: function () {
+                                    return window.open(readmoreURL, "_blank");
+                                }
+                            }]);
+                    }
+                    if (isPublishEnabled && _this._addanewproductformtype && 2 /* Update */ === formType && !_this.isProductFamily()) {
+                        var tosstnotificationText = ProductManagement.StringProvider.getResourceString("Web.SFA.product.edit.aspx_93");
+                        Xrm.UI.addGlobalNotification(1 /* toast */, 1 /* success */, tosstnotificationText, null, null, null);
+                        _this._addanewproductformtype = false;
+                    }
+                }
+            };
+            this.confirmReparent = function () {
+                _this._confirmReparentDialogUp = true;
+                var options = {
+                    height: 300, width: 400, position: 1 /* center */
+                };
+                var dialogParams = {};
+                Xrm.Navigation.openDialog("ConfirmReparent", options, dialogParams).then(_this.resetParent);
+            };
+            this.okHandler = function (context) {
+                var formContext = ClientUtility.DataUtil.isNullOrUndefined(context) ? Xrm.Page : context.getFormContext();
+                ClientUtility.DialogUtil.setLastButtonClicked("ok_id");
+                formContext.ui.close();
+            };
+            this.cancelHandler = function (context) {
+                var formContext = ClientUtility.DataUtil.isNullOrUndefined(context) ? Xrm.Page : context.getFormContext();
+                ClientUtility.DialogUtil.setLastButtonClicked("cancel_id");
+                formContext.ui.close();
+            };
+            this.resetParent = function (dialogParams) {
+                var lastButtonClicked = dialogParams.parameters["param_lastButtonClicked"];
+                _this._confirmReparentDialogUp = false;
+                var logReparent = "ChangeProductParent";
+                var parentAttribute = Xrm.Page.getAttribute("parentproductid");
+                if (lastButtonClicked == "cancel_id") {
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(parentAttribute))
+                        parentAttribute.setValue(_this._prevParent);
+                    _this._logReportSuccess(logReparent + ".Cancelled");
+                }
+                if (lastButtonClicked == "ok_id") {
+                    _this._saveForReparentingInProgress = true;
+                    _this._logReportSuccess(logReparent + ".Continued");
+                    Xrm.Page.data.save().then(function (success) {
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(parentAttribute))
+                            _this._prevParent = parentAttribute.getValue();
+                        _this._saveForReparentingInProgress = false;
+                    }, function (failed) {
+                        _this._saveForReparentingInProgress = false;
+                    });
+                }
+            };
+            this._logReportSuccess = function (logMessage) {
+                if (!ClientUtility.DataUtil.isNullOrEmptyString(logMessage) && !ClientUtility.DataUtil.isNullOrUndefined(Xrm.Reporting)) {
+                    Xrm.Reporting.reportSuccess(logMessage);
+                }
+            };
+        }
+        ProductMainSystemLibraryWebResource.prototype.isFeatureEnabled = function (featurename) {
+            var flag = false;
+            if (ClientUtility.ClientUtil.isUCI()) {
+                flag = Xrm.Internal.isFeatureEnabled(featurename.substring(4));
+            }
+            else {
+                flag = Xrm.Internal.isFeatureEnabled(featurename);
+            }
+            return flag;
+        };
+        /**
+         * function to return true if all FCBs are enabled or false if any one is disabled
+         */
+        ProductMainSystemLibraryWebResource.prototype.isProductReparentingEnabled = function () {
+            var flag = false;
+            if (this.isFeatureEnabled(this._fcbOctober2019Update) && this.isFeatureEnabled(this._fcbEnableReparentingForProduct)) {
+                flag = true;
+            }
+            return flag;
+        };
+        ProductMainSystemLibraryWebResource.prototype.showPricingSectionIfRequired = function () {
+            // Validate if duplicate controls are present for List Price, Standard Cost and Current Cost
+            var AreDuplicateControlsPresent = this.IsDuplicateControlFound("price") ||
+                this.IsDuplicateControlFound("standardcost") ||
+                this.IsDuplicateControlFound("currentcost");
+            // If duplicate controls are present then lets hide pricing information section which contains all fields.
+            if (!AreDuplicateControlsPresent && Xrm.Page.ui.tabs) {
+                var priceListTab = Xrm.Page.ui.tabs.get("price_list_items");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(priceListTab) && !ClientUtility.DataUtil.isNullOrUndefined(priceListTab.sections)) {
+                    var pricingInfoSection = priceListTab.sections.get("msdynsales_pricing_information");
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(pricingInfoSection)) {
+                        pricingInfoSection.setVisible(true);
+                    }
+                }
+            }
+        };
+        // This api will return if there are duplicate controls present for a specific attribute
+        ProductMainSystemLibraryWebResource.prototype.IsDuplicateControlFound = function (attributeName) {
+            var isDuplicateControlFound = false;
+            var attribute = Xrm.Page.data.entity.attributes.get(attributeName);
+            if (attribute && attribute.controls) {
+                isDuplicateControlFound = attribute.controls.getLength() > 1;
+            }
+            return isDuplicateControlFound;
+        };
+        ProductMainSystemLibraryWebResource.prototype.handleMobileOffline = function () {
+            if (ClientUtility.ClientUtil.isMobileOffline()) {
+                var propertiesTab = Xrm.Page.ui.tabs.get("product_dynamic_properties");
+                if (propertiesTab != null && propertiesTab.getDisplayState() != "collapsed") {
+                    var propertiesControlOnline = Xrm.Page.ui.controls.get("product_dynamic_properties");
+                    var propertiesControlOffline = Xrm.Page.ui.controls.get("product_dynamic_properties_offline");
+                    if (propertiesControlOnline != null) {
+                        propertiesControlOnline.setVisible(false);
+                    }
+                    if (propertiesControlOffline != null) {
+                        propertiesControlOffline.setVisible(true);
+                    }
+                }
+            }
+        };
+        ProductMainSystemLibraryWebResource.prototype.handleParentProductFields = function () {
+            var parentProductVisibility, parentProductDisabled, editableParentVisibility, editableParentDisabled;
+            var isReparentingEnabled = this.isProductReparentingEnabled();
+            var isCreateForm = (Xrm.Page.ui.getFormType() === 1 /* Create */);
+            var isUci = ClientUtility.ClientUtil.isUCI();
+            switch (isCreateForm) {
+                case true:
+                    // For create form in web & UCI
+                    // Any change here should be also tested in quick create (for creating Product Family)
+                    parentProductVisibility = true;
+                    parentProductDisabled = false;
+                    editableParentVisibility = false;
+                    editableParentDisabled = true;
+                    break;
+                case false:
+                    // Update form in web & UCI
+                    // Hide parentproductid in UCI
+                    parentProductVisibility = !isUci;
+                    parentProductDisabled = true;
+                    // Show editable control in UCI or if reparenting is enabled in web
+                    // If reparenting is disabled, disable the control in UCI update form
+                    editableParentVisibility = (isUci || isReparentingEnabled);
+                    editableParentDisabled = !isReparentingEnabled;
+                    break;
+            }
+            ProductMainSystemLibraryWebResource.setVisibility("parentproductid", parentProductVisibility);
+            ProductMainSystemLibraryWebResource.disableControl("parentproductid", parentProductDisabled);
+            ProductMainSystemLibraryWebResource.setVisibility("editableParentControl", editableParentVisibility);
+            ProductMainSystemLibraryWebResource.disableControl("editableParentControl", editableParentDisabled);
+            if (isReparentingEnabled) {
+                // If reparenting is enabled add an onchange handler to statecode
+                // This handler disables editableParentControl if product is not in Draft/Under revision states
+                this.handleLockStatusForParentProduct();
+            }
+        };
+        /**
+         * Handles the disabled state for parent product control
+         * Reparenting is allowed only on 'Draft' and 'Under revision' product states
+        */
+        ProductMainSystemLibraryWebResource.prototype.handleLockStatusForParentProduct = function () {
+            var statecodeAttribute = Xrm.Page.getAttribute('statecode');
+            if (!ClientUtility.DataUtil.isNullOrUndefined(statecodeAttribute)) {
+                statecodeAttribute.removeOnChange(this.stateCodeOnChangeHandler);
+                statecodeAttribute.addOnChange(this.stateCodeOnChangeHandler);
+            }
+            // Invoking onchange handler for the first time to set state accordingly
+            this.stateCodeOnChangeHandler();
+        };
+        /**
+         * Onchange handler for statecode attribute to lock parent product field accordingly
+         */
+        ProductMainSystemLibraryWebResource.prototype.stateCodeOnChangeHandler = function () {
+            var statecodeAttribute = Xrm.Page.getAttribute('statecode');
+            if (Xrm.Page.ui.getFormType() !== 1 /* Create */ &&
+                !ClientUtility.DataUtil.isNullOrUndefined(statecodeAttribute)) {
+                var statecode = statecodeAttribute.getValue();
+                if (!(statecode == ProductManagement.ProductStateCode.Draft || statecode == ProductManagement.ProductStateCode.DraftActive)) {
+                    ProductMainSystemLibraryWebResource.disableControl("editableParentControl", true);
+                }
+                else {
+                    ProductMainSystemLibraryWebResource.disableControl("editableParentControl", false);
+                }
+            }
+        };
+        ProductMainSystemLibraryWebResource.prototype.getPropertyInheritanceImage = function (dataJson) {
+            if (dataJson != null) {
+                var data = JSON.parse(dataJson);
+                var imgurl = "";
+                var productId = window.parent["productId"];
+                if (data != null && data.regardingobjectid_Value != null && productId != null && data.regardingobjectid_Value.Id != null) {
+                    var regardingIdObject = data.regardingobjectid_Value.Id;
+                    var key = (Object.keys(regardingIdObject).length > 0) ? Object.keys(regardingIdObject)[0].toString() : null;
+                    var regardingObjectId = (key != null) ? regardingIdObject[key].toString() : null;
+                    if ((regardingObjectId != null) && regardingObjectId.replace(/[{}-]/g, '') != productId.substr(1, 36).toLowerCase().replace(/[{}-]/g, '')) {
+                        imgurl = "ProductManagement/_imgs/ico_32_1048_inherited.png";
+                    }
+                    else if (data.basedynamicpropertyid != null) {
+                        imgurl = "ProductManagement/_imgs/ico_32_1048_overridden.png";
+                    }
+                }
+                var resultarray = [imgurl];
+                return resultarray;
+            }
+        };
+        ProductMainSystemLibraryWebResource.prototype.isDraftProductFamily = function () {
+            if (Xrm.Page.data.entity.getEntityName() == ProductManagement.EntityNames.Product) {
+                var productStructure = Xrm.Page.getAttribute("productstructure");
+                var stateCode = Xrm.Page.getAttribute("statecode");
+                this._querystrings = Xrm.Page.context.getQueryStringParameters();
+                // Dynamic Property can be added when the state is Draft OR (State is DraftActive AND 'revise' querystring is NULL)
+                if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && !ClientUtility.DataUtil.isNullOrUndefined(productStructure)) {
+                    return (productStructure.getValue() == ProductManagement.ProductStructureType.ProductFamily) && (stateCode.getValue() == ProductManagement.ProductStateCode.Draft || (stateCode.getValue() == ProductManagement.ProductStateCode.DraftActive && ClientUtility.DataUtil.isNullOrUndefined(this._querystrings["revise"])));
+                }
+            }
+            return false;
+        };
+        return ProductMainSystemLibraryWebResource;
+    }());
+    /**
+     * enable or disable control
+     */
+    ProductMainSystemLibraryWebResource.disableControl = function (controlName, disable) {
+        var control = Xrm.Page.getControl(controlName);
+        if (!ClientUtility.DataUtil.isNullOrUndefined(control)) {
+            control.setDisabled(disable);
+        }
+    };
+    /**
+     * show or hide control
+     */
+    ProductMainSystemLibraryWebResource.setVisibility = function (controlName, visible) {
+        var control = Xrm.Page.getControl(controlName);
+        if (!ClientUtility.DataUtil.isNullOrUndefined(control)) {
+            control.setVisible(visible);
+        }
+    };
+    ProductManagement.ProductMainSystemLibraryWebResource = ProductMainSystemLibraryWebResource;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="EntityNames.ts" />
+/// <reference path="../../../TypeDefinitions/CRM/ClientUtility.d.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Entity set names constants used in Common solution
+    */
+    var EntitySetNames = (function () {
+        function EntitySetNames() {
+            this.names = {};
+        }
+        EntitySetNames.prototype.name = function (entityName) {
+            return this.names[entityName];
+        };
+        EntitySetNames.getInstance = function () {
+            return EntitySetNames.instance;
+        };
+        EntitySetNames.getName = function (entityName) {
+            return EntitySetNames.instance.name(entityName);
+        };
+        return EntitySetNames;
+    }());
+    EntitySetNames.ctor = (function () {
+        EntitySetNames.instance = new EntitySetNames();
+        EntitySetNames.instance.names[ProductManagement.EntityNames.DynamicProperty] = "dynamicproperties";
+        EntitySetNames.instance.names[ProductManagement.EntityNames.Product] = "products";
+        EntitySetNames.instance.names[ProductManagement.EntityNames.ProductAssociation] = "productassociations";
+        EntitySetNames.instance.names[ProductManagement.EntityNames.DynamicPropertyOptionSetItem] = "dynamicpropertyoptionsetitems";
+    })();
+    ProductManagement.EntitySetNames = EntitySetNames;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+var ProductManagement;
+(function (ProductManagement) {
+    var EntityTypeCodes;
+    (function (EntityTypeCodes) {
+        EntityTypeCodes[EntityTypeCodes["DynamicProperty"] = 1048] = "DynamicProperty";
+        EntityTypeCodes[EntityTypeCodes["Lead"] = 4] = "Lead";
+        EntityTypeCodes[EntityTypeCodes["Product"] = 1024] = "Product";
+    })(EntityTypeCodes = ProductManagement.EntityTypeCodes || (ProductManagement.EntityTypeCodes = {}));
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+var ProductManagement;
+(function (ProductManagement) {
+    var EntityReference = (function () {
+        function EntityReference(name, id) {
+            this.Id = id;
+            this.Name = name;
+        }
+        return EntityReference;
+    }());
+    ProductManagement.EntityReference = EntityReference;
+    var EntityReferenceWebApi = (function () {
+        function EntityReferenceWebApi(logicalName, id) {
+            this.id = id;
+            this.logicalName = logicalName;
+        }
+        return EntityReferenceWebApi;
+    }());
+    ProductManagement.EntityReferenceWebApi = EntityReferenceWebApi;
+})(ProductManagement || (ProductManagement = {}));
+/**
+ * @license Copyright (c) Microsoft Corporation. All rights reserved.
+ */
+/**
+ * IMPORTANT!
+ * DO NOT MAKE CHANGES TO THIS FILE - THIS FILE IS AUTO-GENERATED FROM ODATA CSDL METADATA DOCUMENT
+ * SEE https://msdn.microsoft.com/en-us/library/mt607990.aspx FOR MORE INFORMATION
+ */
+var ODataContract;
+(function (ODataContract) {
+    /* tslint:disable:crm-force-fields-private */
+    var PublishProductHierarchyRequest = (function () {
+        function PublishProductHierarchyRequest(entity /*Microsoft.Dynamics.CRM.product*/) {
+            this.entity = entity;
+        }
+        PublishProductHierarchyRequest.prototype.getMetadata = function () {
+            var metadata = {
+                boundParameter: "entity",
+                parameterTypes: {
+                    "entity": {
+                        "typeName": "Microsoft.Dynamics.CRM.product",
+                        "structuralProperty": 5,
+                    },
+                },
+                operationName: "PublishProductHierarchy",
+                operationType: 0,
+            };
+            return metadata;
+        };
+        return PublishProductHierarchyRequest;
+    }());
+    ODataContract.PublishProductHierarchyRequest = PublishProductHierarchyRequest;
+})(ODataContract || (ODataContract = {}));
+/**
+ * @license Copyright (c) Microsoft Corporation. All rights reserved.
+ */
+/**
+ * IMPORTANT!
+ * DO NOT MAKE CHANGES TO THIS FILE - THIS FILE IS AUTO-GENERATED FROM ODATA CSDL METADATA DOCUMENT
+ * SEE https://msdn.microsoft.com/en-us/library/mt607990.aspx FOR MORE INFORMATION
+ */
+var ODataContract;
+(function (ODataContract) {
+    /* tslint:disable:crm-force-fields-private */
+    var RevertProductRequest = (function () {
+        function RevertProductRequest(target /*Microsoft.Dynamics.CRM.crmbaseentity*/) {
+            this.Target = target;
+        }
+        RevertProductRequest.prototype.getMetadata = function () {
+            var metadata = {
+                boundParameter: null,
+                parameterTypes: {
+                    "Target": {
+                        "typeName": "Microsoft.Dynamics.CRM.crmbaseentity",
+                        "structuralProperty": 5,
+                    },
+                },
+                operationName: "RevertProduct",
+                operationType: 0,
+            };
+            return metadata;
+        };
+        return RevertProductRequest;
+    }());
+    ODataContract.RevertProductRequest = RevertProductRequest;
+})(ODataContract || (ODataContract = {}));
+/**
+ * @license Copyright (c) Microsoft Corporation. All rights reserved.
+ */
+/**
+ * IMPORTANT!
+ * DO NOT MAKE CHANGES TO THIS FILE - THIS FILE IS AUTO-GENERATED FROM ODATA CSDL METADATA DOCUMENT
+ * SEE https://msdn.microsoft.com/en-us/library/mt607990.aspx FOR MORE INFORMATION
+ */
+var ODataContract;
+(function (ODataContract) {
+    /* tslint:disable:crm-force-fields-private */
+    var CloneProductRequest = (function () {
+        function CloneProductRequest(entity /*Microsoft.Dynamics.CRM.product*/) {
+            this.entity = entity;
+        }
+        CloneProductRequest.prototype.getMetadata = function () {
+            var metadata = {
+                boundParameter: "entity",
+                parameterTypes: {
+                    "entity": {
+                        "typeName": "Microsoft.Dynamics.CRM.product",
+                        "structuralProperty": 5,
+                    },
+                },
+                operationName: "CloneProduct",
+                operationType: 0,
+            };
+            return metadata;
+        };
+        return CloneProductRequest;
+    }());
+    ODataContract.CloneProductRequest = CloneProductRequest;
+})(ODataContract || (ODataContract = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="../../../TypeDefinitions/CRM/ClientUtility.d.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    // The intent of the class is to pass ErrorRegion as an additional parameter to Common Error handling module defined in ClientUtility. 
+    // This additional parameter is being used for invoking "Lear more" link button on error Dialog. 
+    var ProductErrorHandler = (function () {
+        function ProductErrorHandler() {
+        }
+        return ProductErrorHandler;
+    }());
+    ProductErrorHandler.ErrorRegion = "Sales";
+    ProductErrorHandler.actionFailedErrorDialog = function (errorResponse) {
+        if (errorResponse && errorResponse.errorCode && ProductErrorHandler.ErrorCodesWithHelpLinkAvaliable(errorResponse.errorCode)) {
+            errorResponse.errorRegion = ProductErrorHandler.ErrorRegion;
+        }
+        ClientUtility.ActionFailedHandler.actionFailedErrorDialog(errorResponse);
+    };
+    ProductErrorHandler.actionFailedCallback = function (errorResponse) {
+        if (errorResponse && errorResponse.errorCode && ProductErrorHandler.ErrorCodesWithHelpLinkAvaliable(errorResponse.errorCode)) {
+            errorResponse.errorRegion = ProductErrorHandler.ErrorRegion;
+        }
+        ClientUtility.ActionFailedHandler.actionFailedCallback(errorResponse);
+    };
+    ProductErrorHandler.actionFailedCallbackForWebAPI = function (errorResponse) {
+        if (errorResponse && errorResponse.errorCode && ProductErrorHandler.ErrorCodesWithHelpLinkAvaliable(errorResponse.errorCode)) {
+            errorResponse.errorRegion = ProductErrorHandler.ErrorRegion;
+        }
+        ClientUtility.ActionFailedHandler.actionFailedCallbackForWebAPI(errorResponse);
+    };
+    // This method defines list of error codes which support dynamic Help scenario for Product/PriceList/DynamicProperty/UOM entities
+    ProductErrorHandler.ErrorCodesWithHelpLinkAvaliable = function (errorCode) {
+        switch (errorCode) {
+            case 2147157612: //0x8004F994 -> DraftBundleToProduct
+            case 2147157642: //0x8004F976 -> CannotAddProductToBundle
+            case 2147086287: //0x80061031 -> CannotAddBundleToItself
+            case 2147157646: //0x8004F972 -> BundleCannotContainBundle
+            case 2147086316: //0x80061014 -> BundleCannotContainProductKit
+            case 2147157614: //0x8004F992 -> BundleCannotContainProductFamily
+            case 2147157613: //0x8004f993 -> RetiredProductToBundle
+            case 2147086301: //0x80061023 -> CannotAddProductFamilyToKit
+            case 2147086320: //0x80061010 -> CannotDeleteProductFromActiveBundle
+            case 2147157754: //0x8004f906 -> CanOnlySetActiveOrDraftProductFamilyAsParent
+            case 2147157608: //0x8004F998 -> CannotSetProductAsParent
+            case 2147212541: //0x80042303 -> InvalidParentURState
+            case 2147212542: //0x80042302 -> InvalidParentDraftState
+            case 2147212543: //0x80042301 -> CanOnlyReparentDraftorURProduct
+            case 2147157742: //0x8004F912 -> ProductFromActiveToDraftState
+            case 2147157741: //0x8004F913 -> ProductFromDraftToRevisedState
+            case 2147157639: //0x8004F979 -> ProductFromRetiredToDraftState
+            case 2147086327: //0x80061009 -> CannotAddRetiredProductToPricelist
+            case 2147086329: //0x80061007 -> CannotAddBundleToPriceList
+            case 2147157758: //0x8004F902 -> CannotAddPricelistToProductFamily
+            case 2147157627: //0x8004F985 -> CannotCloneBundleAsProductLimitExceeded
+            case 2147086284:
+                return true;
+            default:
+                return false;
+        }
+    };
+    ProductManagement.ProductErrorHandler = ProductErrorHandler;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="ProductMainSystemLibraryWebResource.ts" />
+/// <reference path="ProductStates.ts" />
+/// <reference path="../Common/EntityNames.ts" />
+/// <reference path="../Common/EntitySetNames.ts" />
+/// <reference path="../Common/EntityTypeCodes.ts" />
+/// <reference path="../Common/EntityReference.ts" />
+/// <reference path="../../../TypeDefinitions/CRM/ClientUtility.d.ts" />
+/// <reference path="../Common/DataContracts/Action/PublishProductHierarchyRequest.ts" />
+/// <reference path="../Common/DataContracts/Action/RevertProductRequest.ts" />
+/// <reference path="../Common/DataContracts/Action/CloneProductRequest.ts" />
+/// <reference path="../Common/ProductErrorHandler.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Product main form command actions class
+    */
+    var ProductCommandAction = (function () {
+        function ProductCommandAction(productMainSystemLibrary) {
+            var _this = this;
+            this._grid = "grid";
+            this._form = "form";
+            this._revise = "revise";
+            this._publish = "publish";
+            this._revert = "revert";
+            this._retire = "retire";
+            this._retireHierarchy = "retirehierarchy";
+            this._publishHierarchy = "publishhierarchy";
+            this._clone = "clone";
+            this._productMainSystemLibrary = null;
+            /**
+            * To check if product it contain revise as a query string parameter.
+            * This will be used a Ribbon rule for 'View Published Product', 'Revert'  button
+            */
+            this.isNotViewPublishedProductForm = function () {
+                var queryStrings = Xrm.Page.context.getQueryStringParameters();
+                if (!ClientUtility.DataUtil.isNullOrUndefined(queryStrings) && !ClientUtility.DataUtil.isNullOrUndefined(queryStrings["revise"])) {
+                    return Boolean.parse(queryStrings["revise"].toString()).valueOf();
+                }
+                return true;
+            };
+            /**
+            * To show Publish/Publish Hierarchy button on product form
+            */
+            this.isPublishVisible = function () {
+                var stateCode = Xrm.Page.data.entity.attributes.get("statecode");
+                var productStructure = Xrm.Page.data.entity.attributes.get("productstructure");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && !ClientUtility.DataUtil.isNullOrUndefined(productStructure))
+                    if (productStructure.getValue() === ProductManagement.ProductStructureType.ProductFamily && stateCode.getValue() !== ProductManagement.ProductStateCode.Retired) {
+                        return true;
+                    }
+                    else if (stateCode.getValue() === ProductManagement.ProductStateCode.Draft || stateCode.getValue() === ProductManagement.ProductStateCode.DraftActive) {
+                        return true;
+                    }
+                return false;
+            };
+            /**
+            * To show Retired/ Retire Hierarchy button on product form.
+            */
+            this.isRetireVisible = function () {
+                var stateCode = Xrm.Page.data.entity.attributes.get("statecode");
+                var productStructure = Xrm.Page.data.entity.attributes.get("productstructure");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && !ClientUtility.DataUtil.isNullOrUndefined(productStructure)) {
+                    if (productStructure.getValue() === ProductManagement.ProductStructureType.ProductFamily && stateCode.getValue() !== ProductManagement.ProductStateCode.Draft) {
+                        return true;
+                    }
+                    else if (stateCode.getValue() === ProductManagement.ProductStateCode.Active || stateCode.getValue() === ProductManagement.ProductStateCode.DraftActive) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            this.hasBeenReparented = function () {
+                var reParentAttr = Xrm.Page.data.entity.attributes.get("isreparented");
+                return (!ClientUtility.DataUtil.isNullOrUndefined(reParentAttr) && reParentAttr.getValue());
+            };
+            /**
+            * Function called when 'View Published Product' is clicked on a Revised Product Form
+            * Opens the same Product Form with query string "revise=false"
+            */
+            this.openPublishedProductFormUnderRevision = function () {
+                if (_this.hasBeenReparented()) {
+                    var alertString = ProductManagement.StringProvider.getResourceString("Viewpublished_after_reparent_error_message");
+                    _this.showErrorMessageDialog(alertString);
+                    return;
+                }
+                var parameters = {};
+                parameters["revise"] = false;
+                Xrm.Utility.openEntityForm(ProductManagement.EntityNames.Product, Xrm.Page.data.entity.getId(), parameters);
+            };
+            /**
+            * This Function opens the DynamicProperty dialog
+            */
+            this.showPreview = function () {
+                var ProductName = Xrm.Page.data.entity.attributes.get("name");
+                var StateCode = Xrm.Page.data.entity.attributes.get("statecode");
+                var entityname = Xrm.Page.data.entity.getEntityName();
+                // ToDo: convert to UCI, work item 497601
+                var typeCode = Xrm.Internal.getEntityCode(entityname);
+                var address = Mscrm.GlobalImported.CrmUri.create("/Tools/FormEditor/Dialogs/dlg_DynamicProperty.aspx");
+                address.get_query()["ProductId"] = Xrm.Page.data.entity.getId();
+                address.get_query()["ProductName"] = CrmEncodeDecode.CrmUrlEncode(ProductName.getValue());
+                address.get_query()["otc"] = typeCode;
+                var queryStrings = Xrm.Page.context.getQueryStringParameters();
+                var isReviseExist = queryStrings["revise"];
+                if (StateCode.getValue() === ProductManagement.ProductStateCode.Draft) {
+                    address.get_query()["IsDraftProduct"] = true;
+                }
+                else {
+                    address.get_query()["IsDraftProduct"] = (StateCode.getValue() === ProductManagement.ProductStateCode.DraftActive && ClientUtility.DataUtil.isNullOrUndefined(isReviseExist));
+                }
+                address.get_query()["DpPreviewMode"] = true;
+                var dialogOptions = { width: 800, height: 800, position: 1 /* center */ };
+                // ToDo: convert to UCI, work item 497601
+                Xrm.Internal.openDialog(address.toString(), dialogOptions, null, null, null);
+            };
+            /**************************  SHOW PREVIEW FUNCTIONALITY IN UCI  ******************************/
+            this.showPreviewUCI = function (context) {
+                var recordId = Xrm.Page.data.entity.getId();
+                var options = {
+                    position: 2 /* side */,
+                    width: 600,
+                    height: 500
+                };
+                var dialogArguments = {};
+                dialogArguments["param_productid"] = recordId;
+                dialogArguments["param_productname"] = Xrm.Page.getAttribute("name").getValue();
+                dialogArguments["param_entityname"] = "product";
+                dialogArguments["param_gridentityname"] = null;
+                Xrm.Navigation.openDialog("PreviewProductProperties", options, dialogArguments).then(function (dialogparams) {
+                });
+            };
+            /*************************  END OF SHOW PREVIEW FUNCTION FOR UCI  ************************************/
+            /**
+            * Clone Action from Product Entity Form
+            */
+            this.cloneFromForm = function () {
+                if (ClientUtility.ClientUtil.isUCI()) {
+                    _this.cloneFromFormWithMDD();
+                }
+                else {
+                    var parameters = null;
+                    var product = null;
+                    var productStructure;
+                    product = new Xrm.Objects.EntityReference(ProductManagement.EntityNames.Product, Xrm.Page.data.entity.getId());
+                    product.TypeName = ProductManagement.EntityNames.Product;
+                    parameters = [product, "form"];
+                    var productStructureAttribute = Xrm.Page.data.entity.attributes.get("productstructure");
+                    if (!ClientUtility.DataUtil.isNullOrEmptyString(productStructureAttribute.toString())) {
+                        productStructure = parseInt(productStructureAttribute.getValue().toString());
+                    }
+                    else {
+                        productStructure = ProductManagement.ProductStructureType.Product;
+                    }
+                    _this.showCloneDialog(parameters, productStructure);
+                }
+            };
+            /**
+            * Clone Action from Product Entity Form with MDD
+            */
+            this.cloneFromFormWithMDD = function () {
+                var entityId = Xrm.Page.data.entity.getId();
+                var parameters = {};
+                parameters["param_entityId"] = entityId;
+                parameters["param_stateTransitionType"] = "clone";
+                parameters["param_fromGrid"] = "false";
+                var options = {
+                    height: 300, width: 400, position: 1 /* center */
+                };
+                Xrm.Navigation.openDialog("statetransition", options, parameters).then(_this.confirmTransitionHandler);
+            };
+            /**
+            * Show the clone dialog
+            */
+            this.showCloneDialog = function (parameters, productStructure) {
+                var url = Mscrm.GlobalImported.CrmUri.create("/_grid/cmds/dlg_product_clone.aspx");
+                url.get_query()["productStructure"] = productStructure;
+                var dialogOptions = { width: 560, height: 200, position: 1 /* center */ };
+                var callBackDelegate = _this._performActionAfterClone;
+                var callbackFunction = Mscrm.CommandBarActions.createCallbackFunctionFactory(callBackDelegate, parameters);
+                // ToDo: convert to UCI, work item 497601
+                Xrm.Internal.openDialog(url.toString(), dialogOptions, null, null, callbackFunction);
+            };
+            /**
+            * this method is getting called by command bar buttons Revise, Publish, Retire etc by
+            * passing the state transition type as parameter on form not from homepage grid
+            */
+            this.stateTransition = function (stateTransitionType) {
+                if (Xrm.Page.data.entity.getIsDirty() && _this._productMainSystemLibrary.isProductReparentingEnabled()) {
+                    var alert = { text: ProductManagement.StringProvider.getResourceString("Save_Before_Publishing_Product_message") };
+                    Xrm.Navigation.openAlertDialog(alert);
+                }
+                else {
+                    Xrm.Page.data.save().then(function () {
+                        // Check If Revert is being done after ReParenting.
+                        if (stateTransitionType == _this._revert && _this.hasBeenReparented()) {
+                            var alertString = ProductManagement.StringProvider.getResourceString("Revert_after_reparent_error_message");
+                            _this.showErrorMessageDialog(alertString);
+                            return;
+                        }
+                        if (ClientUtility.ClientUtil.isUCI())
+                            _this._showStateTransitionDialogWithMDD(stateTransitionType);
+                        else
+                            _this._showStateTransitionDialog(stateTransitionType); // FOR BACKWARD COMPAT; DONT REMOVE
+                    }, function (errorResponse) { ProductManagement.ProductErrorHandler.actionFailedCallback(errorResponse); });
+                }
+            };
+            /**
+            * Defines command bar action for product in the grid
+            */
+            this.showStateTransitionDialogFromGrid = function (stateTransitionType, item, records) {
+                if (ClientUtility.ClientUtil.isUCI()) {
+                    _this.showStateTransitionDialogFromGridWithMDD(stateTransitionType, item, records);
+                }
+                else {
+                    var parameters = [records[0].Id, stateTransitionType, "true"];
+                    var productStructure = (_this.getCellValue("productstructure", item, records[0].Id) === ProductManagement.ProductStructureType.ProductFamily.toString()).toString();
+                    var isKit = (_this.getCellValue("iskit", item, records[0].Id) === "1").toString();
+                    // ToDo: convert to UCI, work item 497601
+                    var dialogConvertionUrl = Mscrm.GlobalImported.CrmUri.create("/_grid/cmds/dlg_productStateTransition.aspx?stateTransitionType=" + CrmEncodeDecode.CrmUrlEncode(stateTransitionType) + "&productId=" + CrmEncodeDecode.CrmUrlEncode(records[0].Id.toString()) + "&isBundle=" + CrmEncodeDecode.CrmUrlEncode(isKit) + "&isProductFamily=" + CrmEncodeDecode.CrmUrlEncode(productStructure));
+                    _this._openProductTransitionConfirmationDialog(dialogConvertionUrl, parameters);
+                }
+            };
+            this.showStateTransitionDialogFromGridWithMDD = function (stateTransitionType, item, records) {
+                var parameters = {};
+                parameters["param_entityId"] = records[0].Id;
+                parameters["param_stateTransitionType"] = stateTransitionType;
+                parameters["param_fromGrid"] = "true";
+                var options = {
+                    height: 300, width: 400, position: 1 /* center */
+                };
+                Xrm.Navigation.openDialog("statetransition", options, parameters).then(_this.confirmTransitionHandler);
+            };
+            /**
+            * Returns the Cell value of the selected row in Grid
+            */
+            this.getCellValue = function (columnName, gird, rowId) {
+                var row = gird.getGrid() ? gird.getGrid().getRows().get(rowId) : null;
+                if (!ClientUtility.DataUtil.isNullOrUndefined(row)) {
+                    // ToDo: convert to UCI, work item 497601
+                    var entityAttribute = row.getData().getEntity().attributes.getByName(columnName);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(entityAttribute) && !ClientUtility.DataUtil.isNullOrUndefined(entityAttribute.getValue())) {
+                        return entityAttribute.getValue().toString();
+                    }
+                }
+                return null;
+            };
+            this._performActionAfterClone = function (result, product, source) {
+                if (result) {
+                    Xrm.Internal.messages.cloneProduct(product).then(function (response) {
+                        _this._handleCloningResponse(response, product, source);
+                    }, Mscrm.InternalUtilities.ClientApiUtility.actionFailedCallback);
+                }
+            };
+            this._performActionAfterCloneWithMDD = function (productId, calledFromGrid) {
+                var cloneProductRequest = new ODataContract.CloneProductRequest({
+                    id: productId,
+                    entityType: ProductManagement.EntityNames.Product
+                });
+                Xrm.WebApi.online.execute(cloneProductRequest).then(function (response) {
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(response) && response.ok) {
+                        if (calledFromGrid) {
+                            _this._refreshParentGrid(productId, ProductManagement.EntityNames.Product);
+                        }
+                        else {
+                            var clonedProductId = null;
+                            // Odata endpoint returns empty response body for actions with response type entity reference (when return preference header is not set in the request, which is the case with Xrm.WebApi.online.execute API).
+                            // But, entity Id is present in OData-EntityId response header, which we are using to open entity form for cloned product.
+                            if (response.headers && response.headers.has && response.headers.has('odata-entityid')) {
+                                var odataEntityIdHeader = response.headers.get('odata-entityid');
+                                var entitySetName = ProductManagement.EntitySetNames.getName(ProductManagement.EntityNames.Product);
+                                var entitySetRegex = new RegExp('\\/' + entitySetName + '\\(.*\\)', 'i');
+                                var entitySetIndex = -1;
+                                if (!ClientUtility.DataUtil.isNullOrUndefined(odataEntityIdHeader) && (entitySetIndex = odataEntityIdHeader.search(entitySetRegex)) !== -1) {
+                                    clonedProductId = odataEntityIdHeader.substring(entitySetIndex + 10, odataEntityIdHeader.length - 1);
+                                    if (!ClientUtility.DataUtil.isNullOrEmptyString(clonedProductId)) {
+                                        Xrm.Utility.openEntityForm(ProductManagement.EntityNames.Product, clonedProductId, null);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }, function (errorResponse) { ProductManagement.ProductErrorHandler.actionFailedCallback(errorResponse); });
+            };
+            this._handleCloningResponse = function (response, product, source) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(response))
+                    if (source === _this._grid) {
+                        _this._refreshParentGrid(product.Id, ProductManagement.EntityNames.Product);
+                    }
+                    else if (source === _this._form && !ClientUtility.DataUtil.isNullOrUndefined(response.clonedProduct)) {
+                        var productID = response.clonedProduct.Id.toString();
+                        Xrm.Utility.openEntityForm(ProductManagement.EntityNames.Product, productID, null);
+                        Xrm.Internal.refreshParentGrid(ProductManagement.EntityTypeCodes.Product, null, productID);
+                    }
+            };
+            this._showStateTransitionDialog = function (stateTransitionType) {
+                var entityId = Xrm.Page.data.entity.getId();
+                var parameters = [entityId, stateTransitionType, "false"];
+                // ToDo: convert to UCI, work item 497601
+                var dialogConvertionUrl = Mscrm.GlobalImported.CrmUri.create("/_grid/cmds/dlg_productStateTransition.aspx?stateTransitionType=" + CrmEncodeDecode.CrmUrlEncode(stateTransitionType) + "&productId=" + CrmEncodeDecode.CrmUrlEncode(entityId) + "&isBundle=" + CrmEncodeDecode.CrmUrlEncode(_this._productMainSystemLibrary.isBundle().toString()) + "&isProductFamily=" + CrmEncodeDecode.CrmUrlEncode(_this._productMainSystemLibrary.isProductFamily().toString()));
+                _this._openProductTransitionConfirmationDialog(dialogConvertionUrl, parameters);
+            };
+            this._showStateTransitionDialogWithMDD = function (stateTransitionType) {
+                var entityId = Xrm.Page.data.entity.getId();
+                var parameters = {};
+                parameters["param_entityId"] = entityId;
+                parameters["param_stateTransitionType"] = stateTransitionType;
+                parameters["param_fromGrid"] = "false";
+                var options = {
+                    height: 300, width: 400, position: 1 /* center */
+                };
+                Xrm.Navigation.openDialog("statetransition", options, parameters).then(_this.confirmTransitionHandler);
+            };
+            this.onLoadConfirmStateDialog = function (context) {
+                var stateTransitionType = ClientUtility.DialogUtil.getAttributeValue("param_stateTransitionType");
+                var headerControl = Xrm.Page.getControl("lbl_header");
+                var messageControl = Xrm.Page.getControl("lbl_message");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(headerControl) && !ClientUtility.DataUtil.isNullOrUndefined(messageControl)) {
+                    switch (stateTransitionType) {
+                        case _this._revise:
+                            headerControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmRevise"));
+                            messageControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmReviseMessage"));
+                            break;
+                        case _this._publish:
+                            headerControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmPublish"));
+                            messageControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmPublishMessage"));
+                            break;
+                        case _this._revert:
+                            headerControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmRevert"));
+                            messageControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmRevertMessage"));
+                            break;
+                        case _this._retire:
+                        case _this._retireHierarchy:
+                            headerControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmRetire"));
+                            messageControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmRetireMessage"));
+                            break;
+                        case _this._publishHierarchy:
+                            headerControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmHierarchyPublish"));
+                            messageControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmHierarchyPublishMessage"));
+                            break;
+                        case _this._clone:
+                            headerControl.setLabel(ProductManagement.StringProvider.getResourceString("CloneProduct"));
+                            messageControl.setLabel(ProductManagement.StringProvider.getResourceString("ConfirmCloneMessage"));
+                        default:
+                            break;
+                    }
+                }
+            };
+            this.confirmStateTransition = function (context) {
+                var formContext = ClientUtility.DataUtil.isNullOrUndefined(context) ? Xrm.Page : context.getFormContext();
+                ClientUtility.DialogUtil.getAttributeValue("param_stateTransitionType");
+                ClientUtility.DialogUtil.setLastButtonClicked("ok_id");
+                _this._logReportSuccess(ClientUtility.DialogUtil.getAttributeValue("param_stateTransitionType") + ".Confirmed");
+                formContext.ui.close();
+            };
+            this.cancelStateTransition = function (context) {
+                var formContext = ClientUtility.DataUtil.isNullOrUndefined(context) ? Xrm.Page : context.getFormContext();
+                ClientUtility.DialogUtil.setLastButtonClicked("cancel_id");
+                _this._logReportSuccess(ClientUtility.DialogUtil.getAttributeValue("param_stateTransitionType") + ".Cancelled");
+                formContext.ui.close();
+            };
+            this.confirmTransitionHandler = function (dialogResponse) {
+                var lastButtonClicked = dialogResponse.parameters["param_lastButtonClicked"];
+                if (lastButtonClicked == "ok_id") {
+                    var entityId = dialogResponse.parameters["param_entityId"];
+                    var stateTransitionType = dialogResponse.parameters["param_stateTransitionType"];
+                    var fromGrid = false;
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(dialogResponse.parameters["param_fromGrid"]) && (dialogResponse.parameters["param_fromGrid"] == "true"))
+                        fromGrid = true;
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(stateTransitionType) && stateTransitionType == "clone") {
+                        _this._performActionAfterCloneWithMDD(entityId, fromGrid);
+                    }
+                    else {
+                        _this._productStateTransition(entityId, stateTransitionType, fromGrid);
+                    }
+                    window.Xrm.UI.addGlobalNotification(1 /* toast */, 1 /* success */, (ProductManagement.StringProvider.getResourceString("Product_has_been_cloned_Successfully"), "", null));
+                }
+            };
+            this._openProductTransitionConfirmationDialog = function (dialogConversionUrl, parameters) {
+                var dialogOptions = { width: 520, height: 200, position: 1 /* center */ };
+                var callBackFunction = Mscrm.CommandBarActions.createCallbackFunctionFactory(_this._performRefreshedAction, parameters);
+                Xrm.Internal.openDialog(dialogConversionUrl.toString(), dialogOptions, null, null, callBackFunction);
+            };
+            this._performRefreshedAction = function (func, entityId, stateTransitionType, fromGrid) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(func) && func) {
+                    _this._productStateTransition(entityId, stateTransitionType, fromGrid);
+                }
+            };
+            this.showErrorMessageDialog = function (alertString) {
+                var alertStrings = {
+                    text: alertString
+                };
+                Xrm.Navigation.openAlertDialog(alertStrings);
+            };
+            this._productStateTransition = function (entityId, stateTransitionType, calledFromGrid) {
+                var entityName = ProductManagement.EntityNames.Product;
+                switch (stateTransitionType) {
+                    case _this._revise:
+                        _this._updateProductState(entityId, ProductManagement.ProductStateCode.DraftActive, calledFromGrid);
+                        break;
+                    case _this._publish:
+                        _this._updateProductState(entityId, ProductManagement.ProductStateCode.Active, calledFromGrid);
+                        break;
+                    case _this._revert:
+                        if (ClientUtility.ClientUtil.isUCI()) {
+                            var revertProductRequest = new ODataContract.RevertProductRequest({
+                                id: entityId,
+                                entityType: ProductManagement.EntityNames.Product
+                            });
+                            Xrm.WebApi.online.execute(revertProductRequest).then(function (response) {
+                                _this._handleProductStateTransitionResponse(response, entityId, entityName, calledFromGrid);
+                            }, ClientUtility.ActionFailedHandler.actionFailedCallback);
+                        }
+                        else {
+                            var target = new Xrm.Objects.EntityReference(entityName, entityId);
+                            Xrm.Internal.messages.revertProduct(target).then(function (response) {
+                                _this._handleProductStateTransitionResponse(response, entityId, entityName, calledFromGrid);
+                            }, Mscrm.InternalUtilities.ClientApiUtility.actionFailedCallback);
+                        }
+                        break;
+                    case _this._retire:
+                    case _this._retireHierarchy:
+                        _this._updateProductState(entityId, ProductManagement.ProductStateCode.Retired, calledFromGrid);
+                        break;
+                    case _this._publishHierarchy:
+                        if (ClientUtility.ClientUtil.isUCI()) {
+                            var publishProductHierarchyRequest = new ODataContract.PublishProductHierarchyRequest({
+                                id: entityId,
+                                entityType: ProductManagement.EntityNames.Product
+                            });
+                            Xrm.WebApi.online.execute(publishProductHierarchyRequest).then(function (response) {
+                                _this._handleProductStateTransitionResponse(response, entityId, entityName, calledFromGrid);
+                            }, function (errorResponse) { ProductManagement.ProductErrorHandler.actionFailedCallback(errorResponse); });
+                        }
+                        else {
+                            var productFamilyId = new Xrm.Objects.EntityReference(entityName, entityId);
+                            Xrm.Internal.messages.publishProductHierarchy(productFamilyId).then(function (response) {
+                                _this._handleProductStateTransitionResponse(response, entityId, entityName, calledFromGrid);
+                            }, Mscrm.InternalUtilities.ClientApiUtility.actionFailedCallback).fail(function (CrmErrorResponse) {
+                                _this._resetReviseQueryStringAndRefreshPage();
+                                _this._refreshParentGrid(entityId, entityName);
+                            });
+                        }
+                    default:
+                        break;
+                }
+            };
+            this._updateProductState = function (entityId, stateCode, calledFromGrid) {
+                Xrm.WebApi.updateRecord(ProductManagement.EntityNames.Product, entityId, {
+                    statecode: stateCode,
+                    statuscode: -1
+                }).then(function (successParameter) {
+                    _this._handleProductStateTransitionResponse(successParameter, entityId, ProductManagement.EntityNames.Product, calledFromGrid);
+                }, function (errorResponse) { ProductManagement.ProductErrorHandler.actionFailedCallback(errorResponse); });
+            };
+            this._handleProductStateTransitionResponse = function (response, entityId, entityName, calledFromGrid) {
+                var caller = Boolean.parse(calledFromGrid.toString());
+                if (!ClientUtility.DataUtil.isNullOrUndefined(response)) {
+                    if (!caller) {
+                        Xrm.Page.data.refresh(_this._resetReviseQueryStringAndRefreshPage());
+                        _this._showStateCode();
+                    }
+                    _this._refreshParentGrid(entityId, entityName);
+                }
+            };
+            this._refreshParentGrid = function (entityId, entityName) {
+                if (entityName) {
+                    Xrm.Utility.refreshParentGrid({ entityType: entityName, id: entityId, name: undefined });
+                }
+            };
+            this._resetReviseQueryStringAndRefreshPage = function () {
+                var parameters = Xrm.Page.context.getQueryStringParameters();
+                if (!ClientUtility.DataUtil.isNullOrUndefined(parameters["revise"])) {
+                    delete parameters["revise"];
+                    Xrm.Utility.openEntityForm(ProductManagement.EntityNames.Product, Xrm.Page.data.entity.getId(), parameters);
+                    return false;
+                }
+                return true;
+            };
+            this._showStateCode = function () {
+                var stateCode = Xrm.Page.getControl("header_statecode");
+                if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode)) {
+                    stateCode.setVisible(true);
+                }
+            };
+            this._logReportSuccess = function (logMessage) {
+                if (!ClientUtility.DataUtil.isNullOrEmptyString(logMessage) && !ClientUtility.DataUtil.isNullOrUndefined(Xrm.Reporting)) {
+                    Xrm.Reporting.reportSuccess(logMessage);
+                }
+            };
+            this._productMainSystemLibrary = productMainSystemLibrary;
+        }
+        return ProductCommandAction;
+    }());
+    ProductManagement.ProductCommandAction = ProductCommandAction;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="ProductCommandActions.ts" />
+/// <reference path="ProductStates.ts" />s
+/// <reference path="../Common/EntityNames.ts" />
+/// <reference path="../Common/EntityTypeCodes.ts" />
+/// <reference path="../../../TypeDefinitions/CRM/ClientUtility.d.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Defines command bar action for product in the grid
+    */
+    var ProductGridCommandAction = (function () {
+        function ProductGridCommandAction(prodcutCommandAction) {
+            var _this = this;
+            this._prodcutCommandAction = null;
+            /**
+            * Gets the record's primary attribute value.
+            */
+            this.cloneFromGrid = function (item, records) {
+                if (ClientUtility.ClientUtil.isUCI()) {
+                    _this.cloneFromGridWithMDD(item, records);
+                }
+                else {
+                    var parameters = null;
+                    var product = null;
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                        product = new Xrm.Objects.EntityReference(ProductManagement.EntityNames.Product, records[0].Id);
+                        product.TypeName = ProductManagement.EntityNames.Product;
+                        parameters = [product, "grid"];
+                        var productStructure;
+                        if (!ClientUtility.DataUtil.isNullOrEmptyString(_this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id.toString()))) {
+                            productStructure = parseInt(_this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id.toString()));
+                        }
+                        else {
+                            productStructure = ProductManagement.ProductStructureType.Product;
+                        }
+                        _this._prodcutCommandAction.showCloneDialog(parameters, productStructure);
+                    }
+                }
+            };
+            /**
+            * Clone from grid with MDD
+            */
+            this.cloneFromGridWithMDD = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var entityId = records[0].Id;
+                    var parameters = {};
+                    parameters["param_entityId"] = entityId;
+                    parameters["param_stateTransitionType"] = "clone";
+                    parameters["param_fromGrid"] = "true";
+                    var options = {
+                        height: 300, width: 400, position: 1 /* center */
+                    };
+                    Xrm.Navigation.openDialog("statetransition", options, parameters).then(_this._prodcutCommandAction.confirmTransitionHandler);
+                }
+            };
+            /**
+            * reclassify product
+            */
+            this.reclassify = function (gridControl, selectedRecords, entityTypeCode) {
+                // ToDo: convert to UCI, work item 497601
+                var actionUri = Mscrm.InternalUtilities.GridUtilities.generateStandardActionUri("reclassify", entityTypeCode, selectedRecords.length);
+                Mscrm.InternalUtilities.GridUtilities.executeStandardAction(actionUri, selectedRecords, 420, 200, Mscrm.GridCommandActions.createRefreshGridCallback(gridControl));
+            };
+            /**
+            * this opens a bundle form
+            */
+            this.openBundleForm = function (item, entityTypeName, records) {
+                var parameters = _this._setParentProductParameter(item, records);
+                if (!parameters) {
+                    parameters = {};
+                }
+                parameters["productstructure"] = ProductManagement.ProductStructureType.ProductBundle;
+                Xrm.Utility.openEntityForm(entityTypeName, null, parameters);
+            };
+            /**
+            * this opens a product form
+            */
+            this.openProductForm = function (item, entityTypeName, records) {
+                var parameters = _this._setParentProductParameter(item, records);
+                Xrm.Utility.openEntityForm(entityTypeName, null, parameters);
+            };
+            /**
+            * To check if product is in Retired state.
+            */
+            this.isStateRetired = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var stateCode = _this._prodcutCommandAction.getCellValue("statecode", item, records[0].Id.toString());
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && (stateCode === ProductManagement.ProductStateCodeDescription.Inactive || parseInt(stateCode) === ProductManagement.ProductStateCode.Retired)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            /**
+            * Checks for non Product Kit record to Enable Clone button on Ribbon Command
+            */
+            this.isNotProductKit = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var isKit = _this._prodcutCommandAction.getCellValue("iskit", item, records[0].Id.toString());
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(isKit) && isKit === "0") {
+                        return true;
+                    }
+                    else if (!ClientUtility.DataUtil.isNullOrUndefined(isKit)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            /**
+            * To check if product is kit or product.
+            */
+            this.isProductOrKit = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var productStructure = _this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(productStructure) && parseInt(productStructure) === ProductManagement.ProductStructureType.Product) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            /**
+            * To check if product has parent or not.
+            */
+            this.noParentProductExists = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var parentProductId = _this._prodcutCommandAction.getCellValue("parentproductid", item, records[0].Id);
+                    if (ClientUtility.DataUtil.isNullOrEmptyString(parentProductId)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            /**
+            * To check if product has parent or not.
+            */
+            this.isProductFamily = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var productStructure = _this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(productStructure) && parseInt(productStructure) === ProductManagement.ProductStructureType.ProductFamily) {
+                        return true;
+                    }
+                    else if (!ClientUtility.DataUtil.isNullOrUndefined(productStructure)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            /**
+            * Enable/Show the Publish/Publish Hierarchy for product family if product is not in Retired state
+            * Enable/Show the Publish/Publish Hierarchy for Product/Bundles if product is Draft or Revised state
+            */
+            this.isProductRetired = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var productStructure = _this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id);
+                    var stateCode = _this._prodcutCommandAction.getCellValue("statecode", item, records[0].Id);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(productStructure) && !ClientUtility.DataUtil.isNullOrUndefined(stateCode)) {
+                        if ((stateCode !== ProductManagement.ProductStateCodeDescription.Inactive || parseInt(stateCode) !== ProductManagement.ProductStateCode.Retired) && parseInt(productStructure) === ProductManagement.ProductStructureType.ProductFamily) {
+                            return true;
+                        }
+                        else if (stateCode === ProductManagement.ProductStateCodeDescription.Draft || parseInt(stateCode) === ProductManagement.ProductStateCode.Draft || stateCode === ProductManagement.ProductStateCodeDescription.UnderRevision || parseInt(stateCode) === ProductManagement.ProductStateCode.DraftActive) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            /**
+            * Enable/Show the Retire/Retire Hierarchy for product family if product is not in Draft state
+            * Enable/Show the Retire/Retire Hierarchy for Product/Bundles if product is Active or Revised state
+            */
+            this.isProductNotInDraft = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var stateCode = _this._prodcutCommandAction.getCellValue("statecode", item, records[0].Id);
+                    var productStructure = _this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && !ClientUtility.DataUtil.isNullOrUndefined(productStructure)) {
+                        if (parseInt(productStructure) === ProductManagement.ProductStructureType.ProductFamily && (stateCode !== ProductManagement.ProductStateCodeDescription.Draft || parseInt(stateCode) !== ProductManagement.ProductStateCode.Draft)) {
+                            return true;
+                        }
+                        else if (parseInt(stateCode) === ProductManagement.ProductStateCode.Active || stateCode === ProductManagement.ProductStateCodeDescription.Active || parseInt(stateCode) === ProductManagement.ProductStateCode.DraftActive || stateCode === ProductManagement.ProductStateCodeDescription.UnderRevision) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            /**
+            * Enable/Show the Ribbon Commands if state is Active
+            */
+            this.isProductActive = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var stateCode = _this._prodcutCommandAction.getCellValue("statecode", item, records[0].Id);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(stateCode) && (stateCode === ProductManagement.ProductStateCodeDescription.Active || parseInt(stateCode) === ProductManagement.ProductStateCode.Active)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            /**
+            * Enable/Show the Ribbon Commands if state Revise
+            */
+            this.isProductRevised = function (item, records) {
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var stateCode = _this._prodcutCommandAction.getCellValue("statecode", item, records[0].Id);
+                    if (ClientUtility.DataUtil.isNullOrUndefined(stateCode) && (stateCode === ProductManagement.ProductStateCodeDescription.UnderRevision || parseInt(stateCode) === ProductManagement.ProductStateCode.DraftActive)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            this._setParentProductParameter = function (item, records) {
+                var param = null;
+                if (!ClientUtility.DataUtil.isNullOrUndefined(item) && !ClientUtility.DataUtil.isNullOrUndefined(records) && records.length === 1) {
+                    var productStructure = _this._prodcutCommandAction.getCellValue("productstructure", item, records[0].Id);
+                    if (!ClientUtility.DataUtil.isNullOrUndefined(productStructure)) {
+                        var productStructureValue = Number.parseInvariant(productStructure);
+                        if (!ClientUtility.DataUtil.isNullOrUndefined(productStructureValue) && productStructureValue === ProductManagement.ProductStructureType.ProductFamily) {
+                            param = {};
+                            param["_CreateFromId"] = records[0].Id.toString();
+                            param["_CreateFromType"] = records[0].TypeCode;
+                            if (ClientUtility.ClientUtil.isUCI()) {
+                                param["_CreateFromName"] = records[0].Name;
+                            }
+                        }
+                    }
+                }
+                return param;
+            };
+            this.launchProductFamilyQuickCreate = function (item, entityTypeName, records) {
+                var parameters = _this._setParentProductParameter(item, records);
+                if (!parameters) {
+                    parameters = {};
+                }
+                parameters["productstructure"] = ProductManagement.ProductStructureType.ProductFamily;
+                if (!_this.isOutlookClient()) {
+                    parameters["formid"] = "fd57aeed-ab95-4a32-9c6c-61ae92d2a296";
+                    Xrm.Utility.openQuickCreate("product", null, parameters);
+                }
+                else {
+                    Xrm.Utility.openEntityForm("product", null, parameters);
+                }
+            };
+            this.isEntitlementActive = function () {
+                var isEnable = true;
+                if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.data) && !ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.ui)) {
+                    if (Xrm.Page.data.entity.getEntityName() === ProductManagement.EntityNames.Entitlement) {
+                        if (Xrm.Page.ui.getFormType() === 4 /* Disabled */) {
+                            isEnable = true;
+                        }
+                        else {
+                            isEnable = false;
+                        }
+                    }
+                }
+                else {
+                    var stateCheck = Xrm.Page.getAttribute("statecode");
+                    if (Xrm.Page.ui.getFormType() === 4 /* Disabled */ && (!ClientUtility.DataUtil.isNullOrUndefined(stateCheck) && stateCheck.getValue() === 1)) {
+                        isEnable = false;
+                    }
+                    else {
+                        isEnable = true;
+                    }
+                }
+                return isEnable;
+            };
+            this.isEntitlementDraft = function () {
+                var isEnable = true;
+                if (!ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.data) && !ClientUtility.DataUtil.isNullOrUndefined(Xrm.Page.ui)) {
+                    if (Xrm.Page.data.entity.getEntityName() === ProductManagement.EntityNames.Entitlement) {
+                        if (Xrm.Page.ui.getFormType() === 2 /* Update */) {
+                            isEnable = true;
+                        }
+                        else {
+                            isEnable = false;
+                        }
+                    }
+                }
+                else {
+                    var stateCheck = Xrm.Page.getAttribute("statecode");
+                    if (Xrm.Page.ui.getFormType() === 4 /* Disabled */ && (!ClientUtility.DataUtil.isNullOrUndefined(stateCheck) && stateCheck.getValue() !== 0)) {
+                        isEnable = false;
+                    }
+                    else {
+                        isEnable = true;
+                    }
+                }
+                return isEnable;
+            };
+            this.isOutlookClient = function () {
+                var isOutlookClient = false;
+                var globalContext = Xrm.Utility.getGlobalContext();
+                if (!ClientUtility.DataUtil.isNullOrUndefined(globalContext) && !ClientUtility.DataUtil.isNullOrUndefined(globalContext.client.getClient())) {
+                    var client = globalContext.client.getClient();
+                    if (client === Xrm.Constants.ClientNames.outlook) {
+                        isOutlookClient = true;
+                    }
+                }
+                return isOutlookClient;
+            };
+            this._prodcutCommandAction = prodcutCommandAction;
+        }
+        return ProductGridCommandAction;
+    }());
+    ProductManagement.ProductGridCommandAction = ProductGridCommandAction;
+})(ProductManagement || (ProductManagement = {}));
+/**
+* @license Copyright (c) Microsoft Corporation. All rights reserved.
+*/
+/// <reference path="ProductMainSystemLibraryWebResource.ts" />
+/// <reference path="ProductCommandActions.ts" />
+/// <reference path="ProductGridCommandActions.ts" />
+var ProductManagement;
+(function (ProductManagement) {
+    /**
+    * Main web resource library for Product
+    */
+    var ProductLibrary = (function () {
+        function ProductLibrary() {
+            var global = window;
+            var mscrm = global.Mscrm;
+            mscrm.ProductMainSystemLibraryWebResource = new ProductManagement.ProductMainSystemLibraryWebResource();
+            mscrm.ProductCommandActions = new ProductManagement.ProductCommandAction(mscrm.ProductMainSystemLibraryWebResource);
+            mscrm.ProductGridCommandActions = new ProductManagement.ProductGridCommandAction(mscrm.ProductCommandActions);
+            mscrm.defaultuomid_setadditionalparams = mscrm.ProductMainSystemLibraryWebResource.defaultUoMIdSetAdditionalParams;
+            mscrm.pricelevelid_setadditionalparams = mscrm.ProductMainSystemLibraryWebResource.priceLevelIdSetAdditionalParams;
+            mscrm.Form_onload = mscrm.ProductMainSystemLibraryWebResource.formOnLoad;
+            mscrm.defaultuomscheduleid_onchange = mscrm.ProductMainSystemLibraryWebResource.defaultUoMScheduleIdOnChange;
+            mscrm.quantitydecimal_onchange = mscrm.ProductMainSystemLibraryWebResource.quantityDecimalOnChange;
+            mscrm.pricelevelid_onchange = mscrm.ProductMainSystemLibraryWebResource.priceLevelIdOnChange;
+            mscrm.ShowNotificationIfNeccesary = mscrm.ProductMainSystemLibraryWebResource.ShowNotificationIfNeccesary;
+            mscrm.IsBundle = mscrm.ProductMainSystemLibraryWebResource.IsBundle;
+            mscrm.IsKit = mscrm.ProductMainSystemLibraryWebResource.IsKit;
+            mscrm.IsProduct = mscrm.ProductMainSystemLibraryWebResource.IsProduct;
+            mscrm.IsProductFamily = mscrm.ProductMainSystemLibraryWebResource.IsProductFamily;
+            mscrm.validfromdate_onchange = mscrm.ProductMainSystemLibraryWebResource.validFromDateOnChange;
+            mscrm.validtodate_onchange = mscrm.ProductMainSystemLibraryWebResource.validToDateOnChange;
+            mscrm.Form_onsave = mscrm.ProductMainSystemLibraryWebResource.formOnSave;
+            mscrm.confirm_reparent = mscrm.ProductMainSystemLibraryWebResource.confirmReparent;
+        }
+        return ProductLibrary;
+    }());
+    ProductLibrary.Instance = new ProductLibrary();
+    ProductLibrary.ctor = (function () {
+    })();
+    ProductManagement.ProductLibrary = ProductLibrary;
+})(ProductManagement || (ProductManagement = {}));
+//# sourceMappingURL=Product_main_system_library.js.map
